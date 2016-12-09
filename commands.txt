@@ -4,8 +4,10 @@ mvn archetype:generate \
       -DgroupId=starters \
       -DartifactId=starters.wordcount
 
-2
-3
-	
-spark-submit --class com.cloudera.sparkwordcount.SparkWordCount --master local \
+mvn -Declipse.workspace=/home/cloudera/workspace   eclipse:configure-workspace eclipse:eclipse
+
+spark-submit --class com.cloudera.sparkwordcount.JavaWordCount --master local \
+  target/sparkwordcount-0.0.1-SNAPSHOT.jar inputfile.txt 2
+
+spark-submit --class com.cloudera.sparkwordcount.JavaWordCount --master yarn \
   target/sparkwordcount-0.0.1-SNAPSHOT.jar inputfile.txt 2
