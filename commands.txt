@@ -1,0 +1,11 @@
+mvn archetype:generate \
+      -DarchetypeGroupId=org.apache.maven.archetypes \
+      -DarchetypeArtifactId=maven-archetype-quickstart \
+      -DgroupId=starters \
+      -DartifactId=starters.wordcount
+
+2
+3
+	
+spark-submit --class com.cloudera.sparkwordcount.SparkWordCount --master local \
+  target/sparkwordcount-0.0.1-SNAPSHOT.jar inputfile.txt 2
