@@ -10,6 +10,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.PairFunction;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.SparkConf;
 
 import scala.Tuple2;
@@ -17,10 +18,13 @@ import scala.Tuple2;
 public class JavaWordCount {
 	static Integer dim;
 	static Integer k;
+	
 	public static void main(String[] args) {
 		JavaSparkContext sc = new JavaSparkContext(new SparkConf().setAppName("Spark Word Count"));
 		dim = Integer.parseInt(args[0]);
 		k = Integer.parseInt(args[1]);
+		final Broadcast<Integer> dimBroadCast = sc.broadcast(dim);
+		final Broadcast<Integer> kBroadCast = sc.broadcast(k);
 		final JavaRDD<String> File = sc.textFile(args[2]);
 		
 		JavaPairRDD<String, List<Double>> idMap = File.mapToPair(new PairFunction<String, String, List<Double>>() {
@@ -28,8 +32,8 @@ public class JavaWordCount {
 			public Tuple2<String, List<Double>> call(String s)
 					throws Exception {
 				String[] line = s.split(",");
-				List<Double> val = new ArrayList<Double>(dim);
-				for (int i = 1; i <= dim; i++) {
+				ArrayList<Double> val = new ArrayList<Double>();
+				for (int i = 1; i <= dimBroadCast.value(); i++) {
 					val.add(Double.parseDouble(line[i]));
 				}
 				return new Tuple2<String, List<Double>>(line[0], val);
@@ -55,11 +59,12 @@ public class JavaWordCount {
 		
 		List<String> queries = sc.textFile(args[3]).collect();
 		Iterator<String> query = queries.iterator();
+		List<Tuple2<String, List<Tuple2<String, Double>>>> results = new ArrayList<Tuple2<String, List<Tuple2<String, Double>>>>();
 		while(query.hasNext()) {
 			String[] s = query.next().split(",");
 			String id = s[0];
-			List<Double> qval = new ArrayList<Double>(dim);
-			for (int i = 1; i <= dim; i++) {
+			List<Double> qval = new ArrayList<Double>();
+			for (int i = 1; i <= dimBroadCast.value(); i++) {
 				qval.add(Double.parseDouble(s[i]));
 			}
 			Double qhash = hashFunction(qval);
@@ -70,9 +75,18 @@ public class JavaWordCount {
 				dist.add(new Record(match.get(j), distance(qval, val)));
 			}
 			Collections.sort(dist);
-			dist = dist.subList(0,k);
-			System.out.println(String.format("%d Nearest Neighbors for query id %s are : \n%s\n", k, id, dist));
+			int neighbors = Math.min((int)kBroadCast.value(), dist.size());
+			dist = dist.subList(0, neighbors);
+			List<Tuple2<String, Double>> neighborsPairs = new ArrayList<Tuple2<String, Double>>();
+			Iterator<Record> neighbor = dist.iterator();
+			while (neighbor.hasNext()) {
+				Record record = neighbor.next();
+				neighborsPairs.add(new Tuple2<String, Double>(record.id, record.dist));
+			}
+			results.add(new Tuple2<String, List<Tuple2<String, Double>>>(id, neighborsPairs));
 		}
+		JavaPairRDD<String, List<Tuple2<String, Double>>> resultsRDD = sc.parallelizePairs(results);
+		resultsRDD.saveAsTextFile(args[4]);
 	}
 	
 	private static Double distance(List<Double> list1, List<Double> list2) {
@@ -85,8 +99,9 @@ public class JavaWordCount {
 	
 	private static Double hashFunction(List<Double> list) {
 		Double hash = 0.0;
-		for(int i = 0;i < dim; i++)
-			hash+= (list.get(i)*(Math.pow(7,i)%255))%255;
+		for(int i = 0;i < list.size(); i++)
+			hash+= (list.get(i)*(Math.pow(7,i)%31))%31;
+		hash = hash%31;
 		return hash;
 	}
 }

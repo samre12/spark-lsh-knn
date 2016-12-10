@@ -8,4 +8,4 @@ mvn archetype:generate \
 3
 	
 spark-submit --class starters.JavaWordCount --master local \
-  target/starters.wordcount-1.0-SNAPSHOT.jar inputfile.txt 2
+  target/starters.wordcount-1.0-SNAPSHOT.jar 254 1 mnist.csv mnist_query.csv 
