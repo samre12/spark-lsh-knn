@@ -1,6 +1,7 @@
 package starters;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.spark.api.java.JavaPairRDD;
@@ -52,7 +53,19 @@ public class JavaWordCount {
 					throws Exception {
 				return new Tuple2<Double, String>(t._2, t._1);
 			}
-		}); 	
+		}); 
+		
+		List<String> queries = sc.textFile(args[2]).collect();
+		Iterator<String> query = queries.iterator();
+		while(query.hasNext()) {
+			String[] s = query.next().split(",");
+			String id = s[0];
+			List<Double> val = new ArrayList<Double>(dim);
+			for (int i = 1; i <= dim; i++) {
+				val.add(Double.parseDouble(s[i]));
+			}
+			// add the code to locate elements in the RDD
+		}
 	}
 	
 	private static Double distance(List<Double> list1, List<Double> list2) {
