@@ -1,16 +1,12 @@
 package starters;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.apache.spark.api.java.function.PairFunction;
 import org.apache.spark.SparkConf;
 
@@ -21,63 +17,45 @@ public class JavaWordCount {
 		JavaSparkContext sc = new JavaSparkContext(new SparkConf().setAppName("Spark Word Count"));
 		final Integer dim = Integer.parseInt(args[0]); 
 		final JavaRDD<String> File = sc.textFile(args[1]);
-//		final JavaRDD<String> words = File.flatMap(new FlatMapFunction<String, String>() {
-//			  public Iterable<String> call(String s) { return Arrays.asList(s.split(",")); }
-//			});
-		//JavaSQLContext sqlContext = new JavaSQLContext(sc);
-//		JavaRDD<String[]> rdd_records = File.map(
-//				  new Function<String, String[]>() {
-//				      public String[] call(String line) throws Exception {
-//				    	  String[] fields = line.split(",");
-//				         return fields;
-//				      }
-//				});
 		
-		//HashMap<String,String> hmap = new HashMap<String,String>();
-				
-		
-		JavaPairRDD<Double, String> pairs = File.mapToPair(new PairFunction<String, Double,String>() {
-			  public Tuple2<Double,String> call(String s) { 
-				  String[] line= s.split(",");
-				  //Integer[] val = new Integer[dim];
-				  List<Integer> val = new ArrayList<Integer>(dim);
-				  for (int i=1;i<=dim;i++)
-				   val.add(Integer.parseInt(line[i]));
- 				  Double hash=0.0;
- 				  for(int i=0;i<dim;i++)
- 					  hash+= (val.get(i)*(Math.pow(7,i)%255))%255;
-				  return new Tuple2<Double,String>(hash,line[0]); }
-			});
-		
-		JavaPairRDD<Double,Iterable<String> > htable = pairs.groupByKey().cache();
-		
-		final JavaRDD<String> Query = sc.textFile(args[2]);
-		JavaPairRDD <Double, String> queryHash = Query.mapToPair(new PairFunction<String, Double,String>(){
-			public Tuple2<Double,String> call(String s) { 
-				  String[] line= s.split(",");
-				  //Integer[] val = new Integer[dim];
-				  List<Integer> val = new ArrayList<Integer>(dim);
-				  for (int i=1;i<=dim;i++)
-				   val.add(Integer.parseInt(line[i]));
-				  Double hash=0.0;
-				  for(int i=0;i<dim;i++)
-					  hash+= (val.get(i)*(Math.pow(7,i)%255))%255;
-				  return new Tuple2<Double,String>(hash,line[0]); }
-		}); 
-		
-		
-		JavaPairRDD<Double,Iterable<String> > bucket = htable.filter(new Function<Tuple2<Double,Iterable<String> >,Boolean >(){
-			public Boolean call(Tuple2<Double,Iterable<String> > tup){
-				if(tup._1()==qhash)
-					return true;
-				else
-					return false;
+		JavaPairRDD<String, List<Double>> idMap = File.mapToPair(new PairFunction<String, String, List<Double>>() {
+			@Override
+			public Tuple2<String, List<Double>> call(String s)
+					throws Exception {
+				String[] line = s.split(",");
+				List<Double> val = new ArrayList<Double>(dim);
+				for (int i = 1; i <= dim; i++) {
+					val.add(Double.parseDouble(line[i]));
+				}
+				return new Tuple2<String, List<Double>>(line[0], val);
 			}
 		});
+		idMap.cache();
 		
-		JavaPairRDD<String,String> fin = bucket.flatMapToPair(new PairFlatMapFunction<Tuple2<Double,Iterable<String> >,String, String >(){
-			public
-		});
+		JavaPairRDD<String, Double> idHash = idMap.mapValues(new Function<List<Double>, Double>() {
+			@Override
+			public Double call(List<Double> list) throws Exception {
+				return hashFunction(list);
+			}
+			
+			private Double hashFunction(List<Double> list) {
+				Double hash=0.0;
+				for(int i = 0;i < dim; i++)
+					hash+= (list.get(i)*(Math.pow(7,i)%255))%255;
+				return hash;
+			}
+		}); 
 				
-}
+		JavaPairRDD<Double, String> pairs = idHash.mapToPair(new PairFunction<Tuple2<String, Double>, Double, String>() {
+			@Override
+			public Tuple2<Double, String> call(Tuple2<String, Double> t)
+					throws Exception {
+				return new Tuple2<Double, String>(t._2, t._1);
+			}
+		}); 	
+	}
+	
+	private static Double distance(List<Double> list1, List<Double> list2) {
+		return null;
+	}
 }
