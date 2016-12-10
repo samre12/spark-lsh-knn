@@ -7,5 +7,5 @@ mvn archetype:generate \
 2
 3
 	
-spark-submit --class starters.JavaWordCount --master local \
+spark-submit --class com.cloudera.sparkwordcount.JavaWordCount --master local \
   target/starters.wordcount-1.0-SNAPSHOT.jar inputfile.txt 2
