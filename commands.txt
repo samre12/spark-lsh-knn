@@ -6,5 +6,5 @@ mvn archetype:generate \
 
 mvn -Declipse.workspace=/home/cloudera/workspace   eclipse:configure-workspace eclipse:eclipse
 
-spark-submit --class com.cloudera.sparkwordcount.SparkWordCount --master local \
-  target/sparkwordcount-0.0.1-SNAPSHOT.jar inputfile.txt 2
+spark-submit --class starters.JavaWordCount --master local \
+  target/starters.wordcount-1.0-SNAPSHOT.jar 254 1 2 5.0 1 1 mnist.csv mnist_query.csv output 
